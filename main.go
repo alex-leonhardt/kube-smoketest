@@ -13,7 +13,8 @@ func main() {
 	kubeconfigpath := os.Getenv("KUBECONFIG")
 
 	if kubeconfigpath == "" {
-		kubeconfigpath = "~/.kube/config"
+		homeDir, _ := os.UserHomeDir()
+		kubeconfigpath = homeDir + "/.kube/config"
 	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigpath)
