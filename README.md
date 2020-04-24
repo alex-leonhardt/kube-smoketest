@@ -9,6 +9,8 @@ is running or what was used to set it up. It's by no means meant to be exhaustiv
 
 # build, run, clean-up
 
+| command | desc |
+| ------- | ---- |
 | `make build` | build the binary |
 | `make run` | build and run the binary |
 | `make clean` | remove resources created as part of running kube-smoketest |
