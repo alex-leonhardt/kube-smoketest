@@ -4,7 +4,7 @@ help:
 	@echo "Options:"
 	@echo "- build: build the binary, but don't run it."
 	@echo "- run:   build and run the binary."
-	@ecoh "- clean: clean up after, i.e. deletes the kube-smoketest namespace"
+	@echo "- clean: clean up after, i.e. deletes the kube-smoketest namespace"
 
 build:
 	@echo "Building kube-smoketest binary.."

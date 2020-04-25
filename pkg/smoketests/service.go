@@ -4,3 +4,4 @@
 
 // create a nodePort service and verify access to it, this requires direct access to the cluster nodes
 // TODO: make this optional / skippable
+package smoketests
