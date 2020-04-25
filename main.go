@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-
+	debug := flag.Bool("debug", false, "with debug set, the namespace is not cleaned up at the end of the test, before re-running the test, you must manually delete the NS and wait for it to be gone before re-running kube-smoketest")
 	flag.Parse()
 
 	kubeconfigpath := os.Getenv("KUBECONFIG")
@@ -42,18 +42,38 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
+	// -------------------------------------------------
+	err = smoketests.CreateNamespace(ctx, client)
+	if err != nil {
+		glog.Error(err)
+		errors.Errors = append(errors.Errors, err)
+		LogAndExit(errors) // exit early as if there's no namespace, then we cannot run
+	}
+
+	// -------------------------------------------------
 	err = smoketests.PodLogs(ctx, client)
 	if err != nil {
 		errors.Errors = append(errors.Errors, err)
-		glog.Warningln("error: smoketess.PodLogs")
+		glog.Error(err)
 	}
 
-	if errors.ErrorOrNil() != nil {
-		for _, e := range errors.Errors {
-			glog.Errorln(e)
+	// -------------------------------------------------
+	// delete the namespace when debug is set to false, which is the default
+	if *debug == false {
+		err = smoketests.DeleteNamespace(ctx, client)
+		if err != nil {
+			errors.Errors = append(errors.Errors, err)
+			glog.Error(err)
 		}
+	}
+
+	LogAndExit(errors)
+}
+
+// LogAndExit does just that...
+func LogAndExit(errors multierror.Error) {
+	if errors.ErrorOrNil() != nil {
 		glog.Errorln("fatal: too many errors found, expected: 0, actual:", len(errors.Errors))
 	}
-
 	os.Exit(len(errors.Errors)) // Exits > 0 if any errors occured :)
 }
