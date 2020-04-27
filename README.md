@@ -15,4 +15,8 @@ is running or what was used to set it up. It's by no means meant to be exhaustiv
 | ------- | ---- |
 | `make build` | build the binary |
 | `make run` | build and run the binary |
+| `make debug` | build and run the binary with `-debug` and `-v=10`, this will not delete the namespace at the end of the test |
 | `make clean` | remove resources created as part of running kube-smoketest |
+| `make help` | the default target, i.e. shows this table |
+
+You can manage the verbosity when running the binary directly, setting `-v=2` will add more info logging, using `-v=10` will be used for debugging individual requests where/when necessary.

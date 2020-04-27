@@ -46,24 +46,24 @@ func main() {
 
 	err = smoketests.ComponentStatus(ctx, client)
 	if err != nil {
-		glog.Errorf("👎 Component statuses: %v", err)
+		glog.Errorf("🔴 Component statuses: %v", err)
 		errors.Errors = append(errors.Errors, err)
 		LogAndExit(errors) // exit early as if components are failed
 	}
 	if err == nil {
-		glog.Infoln("👍 Component statuses")
+		glog.Infoln("🧩 Component statuses")
 	}
 
 	// -------------------------------------------------
 
 	err = smoketests.CreateNamespace(ctx, client)
 	if err != nil {
-		glog.Errorf("👎 Create namespace: %v", err)
+		glog.Errorf("🔴 Create namespace: %v", err)
 		errors.Errors = append(errors.Errors, err)
 		LogAndExit(errors) // exit early as if there's no namespace, then we cannot run
 	}
 	if err == nil {
-		glog.Infoln("👍 Create namespace")
+		glog.Infoln("🎮 Create namespace")
 	}
 
 	// -------------------------------------------------
@@ -71,10 +71,10 @@ func main() {
 	err = smoketests.PodLogs(ctx, client)
 	if err != nil {
 		errors.Errors = append(errors.Errors, err)
-		glog.Errorf("👎 Pod + Logs: %v", err)
+		glog.Errorf("🔴 Pod + Logs: %v", err)
 	}
 	if err == nil {
-		glog.Infoln("👍 Pod + Logs")
+		glog.Infoln("🐳 Pod + 📜 Logs")
 	}
 
 	// -------------------------------------------------
@@ -82,10 +82,10 @@ func main() {
 	err = smoketests.CreateDeployment(ctx, client)
 	if err != nil {
 		errors.Errors = append(errors.Errors, err)
-		glog.Errorf("👎 Deployment: %v", err)
+		glog.Errorf("🔴 Deployment: %v", err)
 	}
 	if err == nil {
-		glog.Infoln("👍 Deployment")
+		glog.Infoln("🚀 Deployment")
 	}
 
 	// -------------------------------------------------
@@ -97,11 +97,11 @@ func main() {
 		err = smoketests.DeleteNamespace(ctx, client)
 		if err != nil {
 			errors.Errors = append(errors.Errors, err)
-			glog.Errorf("👎 Delete namespace: %v", err)
+			glog.Errorf("🔴 Delete namespace: %v", err)
 		}
 	}
 	if err == nil {
-		glog.Infoln("👍 Delete namespace")
+		glog.Infoln("⦿ Delete namespace")
 	}
 
 	LogAndExit(errors)
@@ -110,7 +110,7 @@ func main() {
 // LogAndExit does just that...
 func LogAndExit(errors multierror.Error) {
 	if errors.ErrorOrNil() != nil {
-		glog.Errorln("fatal: too many errors found, expected: 0, actual:", len(errors.Errors))
+		glog.Errorln("🔥too many errors found, expected: 0, actual:", len(errors.Errors))
 	}
 	os.Exit(len(errors.Errors)) // Exits > 0 if any errors occured :)
 }

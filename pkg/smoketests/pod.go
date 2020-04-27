@@ -8,10 +8,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/golang/glog"
-	"github.com/jpillora/backoff"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -67,10 +65,10 @@ func CreatePod(ctx context.Context, client *kubernetes.Clientset, testName strin
 
 	pod, err := client.CoreV1().Pods(namespace).Create(ctx, pod, opts)
 	if err != nil {
-		glog.Warning(err.Error())
+		glog.V(2).Infoln(err.Error())
 		return nil, err
 	}
-	glog.Infof("pod %s created", pod.GetName())
+	glog.V(2).Infof("pod %s created", pod.GetName())
 
 	return pod, nil
 }
@@ -80,11 +78,11 @@ func PodLogs(ctx context.Context, client *kubernetes.Clientset) error {
 
 	pod, err := CreatePod(ctx, client, "PodLogs", "", nil, nil)
 	if err != nil {
-		glog.Errorf("failed to create pod for test: %v", err)
+		glog.Errorf("failed to create pod: %v", err)
 		return err
 	}
 
-	if err = WaitForPod(ctx, client, pod); err != nil {
+	if err = WaitFor(ctx, client, Pod, WithPodName(pod.Name)); err != nil {
 		glog.Errorf("failed waiting for pod to become ready: %v", err.Error())
 		return err
 	}
@@ -96,7 +94,7 @@ func PodLogs(ctx context.Context, client *kubernetes.Clientset) error {
 	}
 
 	if len(podList.Items) < 1 {
-		glog.Warningf("no pods found: %v", len(podList.Items))
+		glog.Errorf("no pods found: %v", len(podList.Items))
 		return err
 	}
 
@@ -128,7 +126,7 @@ func PodLogs(ctx context.Context, client *kubernetes.Clientset) error {
 
 	readCloser, err := req.Stream(ctx)
 	if err != nil {
-		glog.Warningln(err.Error())
+		glog.Errorf(err.Error())
 		return err
 	}
 	defer readCloser.Close()
@@ -136,42 +134,15 @@ func PodLogs(ctx context.Context, client *kubernetes.Clientset) error {
 	out := bytes.NewBuffer(nil)
 	_, err = io.Copy(out, readCloser)
 	if err != nil {
-		glog.Warningln(err.Error())
+		glog.Errorf(err.Error())
 		return err
 	}
-	o, _ := ioutil.ReadAll(out)
-	oo := strings.Split(string(o), "\n")
-	glog.Infoln(oo[0:])
+
+	if glog.V(2) {
+		o, _ := ioutil.ReadAll(out)
+		oo := strings.Split(string(o), "\n")
+		glog.Infoln(oo[0:])
+	}
+
 	return nil
-}
-
-// WaitForPod waits for a Pod to be in a Running state
-func WaitForPod(ctx context.Context, client *kubernetes.Clientset, pod *v1.Pod) error {
-
-	bo := backoff.Backoff{
-		Min:    time.Second,
-		Max:    5 * time.Second,
-		Jitter: true,
-		// Factor: float64(0.3),
-	}
-
-	t := time.Now()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(bo.Duration()):
-			// continue below
-		}
-		opts := metav1.GetOptions{}
-		tmpPod, err := client.CoreV1().Pods(namespace).Get(ctx, pod.Name, opts)
-		if err != nil {
-			continue
-		}
-		if tmpPod.Status.Phase == v1.PodRunning {
-			return nil
-		}
-		glog.V(2).Infof("waiting for pod to be ready: %v", time.Since(t))
-	}
 }

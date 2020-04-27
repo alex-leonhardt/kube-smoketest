@@ -19,7 +19,7 @@ func ComponentStatus(ctx context.Context, client *kubernetes.Clientset) error {
 	}
 	for _, status := range statuses.Items {
 		for _, cond := range status.Conditions {
-			glog.Infof("component=%s health=%s msg=%s error=%q", status.ObjectMeta.Name, cond.Status, cond.Message, cond.Error)
+			glog.V(2).Infof("component=%s health=%s msg=%s error=%q", status.ObjectMeta.Name, cond.Status, cond.Message, cond.Error)
 		}
 	}
 

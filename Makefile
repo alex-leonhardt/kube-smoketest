@@ -13,7 +13,7 @@ build:
 
 run: build
 	@echo "Running kube-smoketest.."
-	@build/kube-smoketest -alsologtostderr -v=2
+	@build/kube-smoketest -alsologtostderr
 
 debug: build
 	@echo "Running kube-smoketest w/ debug.."

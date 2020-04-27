@@ -22,14 +22,14 @@ func CreateNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 	// get our namespace and if it already exists, then we'll return early
 	nsget, err := client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	if err == nil {
-		glog.Infof("namespace %s exists, not creating; found: %#v", namespace, nsget)
+		glog.V(2).Infof("namespace %s exists, not creating; found: %#v", namespace, nsget)
 		return nil
 	}
 
 	opts := metav1.CreateOptions{}
 	ns, err = client.CoreV1().Namespaces().Create(ctx, ns, opts)
 	if err != nil {
-		glog.Warningf("failed to create namespace %s: %v", namespace, err.Error())
+		glog.Errorf("failed to create namespace %s: %v", namespace, err.Error())
 		return err
 	}
 
@@ -49,7 +49,7 @@ func CreateNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 		}
 	}
 
-	glog.Infof("namespace %v created", ns.Name)
+	glog.V(2).Infof("namespace %v created", ns.Name)
 	return nil
 }
 
@@ -58,10 +58,10 @@ func DeleteNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 	opts := metav1.DeleteOptions{}
 	err := client.CoreV1().Namespaces().Delete(ctx, namespace, opts)
 	if err != nil {
-		glog.Warningf("failed to delete namespace %s: %v", namespace, err.Error())
+		glog.Errorf("failed to delete namespace %s: %v", namespace, err.Error())
 		return err
 	}
 
-	glog.Infof("namespace %v deleted", namespace)
+	glog.V(2).Infof("namespace %v deleted", namespace)
 	return nil
 }
