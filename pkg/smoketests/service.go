@@ -1,7 +1,13 @@
-// create a service using the deployments' labels as selector, verify access to that service, this confirms
-// that basic networking and DNS work
-
-
-// create a nodePort service and verify access to it, this requires direct access to the cluster nodes
-// TODO: make this optional / skippable
 package smoketests
+
+import (
+	"context"
+	"fmt"
+
+	"k8s.io/client-go/kubernetes"
+)
+
+// CreateService creates a ClusterIP service for the Deployment smoketest
+func CreateService(ctx context.Context, client *kubernetes.Clientset) error {
+	return fmt.Errorf("not implemented")
+}

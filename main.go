@@ -43,28 +43,65 @@ func main() {
 	defer cancel()
 
 	// -------------------------------------------------
+
+	err = smoketests.ComponentStatus(ctx, client)
+	if err != nil {
+		glog.Errorf("👎 Component statuses: %v", err)
+		errors.Errors = append(errors.Errors, err)
+		LogAndExit(errors) // exit early as if components are failed
+	}
+	if err == nil {
+		glog.Infoln("👍 Component statuses")
+	}
+
+	// -------------------------------------------------
+
 	err = smoketests.CreateNamespace(ctx, client)
 	if err != nil {
-		glog.Error(err)
+		glog.Errorf("👎 Create namespace: %v", err)
 		errors.Errors = append(errors.Errors, err)
 		LogAndExit(errors) // exit early as if there's no namespace, then we cannot run
 	}
-
-	// -------------------------------------------------
-	err = smoketests.PodLogs(ctx, client)
-	if err != nil {
-		errors.Errors = append(errors.Errors, err)
-		glog.Error(err)
+	if err == nil {
+		glog.Infoln("👍 Create namespace")
 	}
 
 	// -------------------------------------------------
+
+	err = smoketests.PodLogs(ctx, client)
+	if err != nil {
+		errors.Errors = append(errors.Errors, err)
+		glog.Errorf("👎 Pod + Logs: %v", err)
+	}
+	if err == nil {
+		glog.Infoln("👍 Pod + Logs")
+	}
+
+	// -------------------------------------------------
+
+	err = smoketests.CreateDeployment(ctx, client)
+	if err != nil {
+		errors.Errors = append(errors.Errors, err)
+		glog.Errorf("👎 Deployment: %v", err)
+	}
+	if err == nil {
+		glog.Infoln("👍 Deployment")
+	}
+
+	// -------------------------------------------------
+
+	// -------------------------------------------------
 	// delete the namespace when debug is set to false, which is the default
+
 	if *debug == false {
 		err = smoketests.DeleteNamespace(ctx, client)
 		if err != nil {
 			errors.Errors = append(errors.Errors, err)
-			glog.Error(err)
+			glog.Errorf("👎 Delete namespace: %v", err)
 		}
+	}
+	if err == nil {
+		glog.Infoln("👍 Delete namespace")
 	}
 
 	LogAndExit(errors)

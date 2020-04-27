@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
@@ -34,7 +35,7 @@ func CreatePod(ctx context.Context, client *kubernetes.Clientset, testName strin
 
 	if len(command) < 1 && len(args) < 1 {
 		command = []string{"/bin/sh"}
-		args = []string{"-c", "while true; do echo `date`; sleep 1; done"}
+		args = []string{"-c", "trap 'exit' SIGTERM SIGKILL SIGINT SIGQUIT; while true; do echo `date`; sleep 1; done"}
 	}
 
 	pod := &v1.Pod{
@@ -138,8 +139,9 @@ func PodLogs(ctx context.Context, client *kubernetes.Clientset) error {
 		glog.Warningln(err.Error())
 		return err
 	}
-
-	glog.Infoln(out)
+	o, _ := ioutil.ReadAll(out)
+	oo := strings.Split(string(o), "\n")
+	glog.Infoln(oo[0:])
 	return nil
 }
 
