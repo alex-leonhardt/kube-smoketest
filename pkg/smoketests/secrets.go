@@ -3,7 +3,12 @@ package smoketests
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -38,7 +43,7 @@ func CreateSecret(ctx context.Context, client *kubernetes.Clientset) error {
 		},
 		Type: v1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"user": []byte("YWRtaW4K"),
+			"user": []byte(secretValueBase64),
 		},
 	}
 
@@ -79,7 +84,26 @@ func TestSecret(ctx context.Context, client *kubernetes.Clientset) error {
 	}
 
 	glog.V(10).Infof("list of etcd endpoints found: %v", etcdEndpoints)
+	glog.V(10).Infoln("configuring etcd client with ca=./etcd.ca cert=./etcd.crt key=./etcd.key")
+	// ca pool
+	cacert, err := ioutil.ReadFile("./etcd.ca")
+	if err != nil {
+		return fmt.Errorf("failed to read etcd CA file: %v", err)
+	}
+	capool := x509.NewCertPool()
+	capool.AppendCertsFromPEM(cacert)
+
+	// client cert & key
+	certkey, err := tls.LoadX509KeyPair("./etcd.crt", "./etcd.key")
+	if err != nil {
+		return fmt.Errorf("failed to load cert/key: %v; please ensure that etcd.ca, etcd.crt and etcd.key are in the same directory the binary is run from", err)
+	}
+
 	cli, err := clientv3.New(clientv3.Config{
+		TLS: &tls.Config{
+			RootCAs:      capool,
+			Certificates: []tls.Certificate{certkey},
+		},
 		Endpoints:   etcdEndpoints,
 		DialTimeout: time.Second,
 		DialOptions: []grpc.DialOption{
@@ -110,15 +134,19 @@ func TestSecret(ctx context.Context, client *kubernetes.Clientset) error {
 	etcdCtx, etcdCancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer etcdCancel()
 
-	resp, err := cli.KV.Get(etcdCtx, secretName)
+	resp, err := cli.KV.Get(etcdCtx, "/registry/secrets/"+namespace+"/"+secretName)
 	if err != nil {
 		return fmt.Errorf("failed to get etcd key %s: %v", secretName, err)
 	}
 
-	// TODO: actually check for the correct prefix , but how do we do hexdump ? is that even necessary ?
 	for _, kv := range resp.Kvs {
 		val := kv.Value
-		fmt.Println(val)
+		data := hex.Dump(val)
+
+		glog.V(10).Infof("secret contents: %s", data)
+		if !strings.Contains(data, ":enc:") {
+			glog.Warningf("\t⚠️  the kubernetes secret %q is not encrypted at rest", secretName)
+		}
 	}
 
 	return nil

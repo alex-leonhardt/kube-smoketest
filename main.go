@@ -17,7 +17,8 @@ import (
 )
 
 func main() {
-	debug := flag.Bool("debug", false, "with debug set, the namespace is not cleaned up at the end of the test, before re-running the test, you must manually delete the NS and wait for it to be gone before re-running kube-smoketest")
+	debug := flag.Bool("debug", false, "do not delete namespace at the end of the test, you must manually delete the NS and wait for it to be gone before re-running kube-smoketest")
+	flag.Set("logtostderr", "true")
 	flag.Parse()
 
 	kubeconfigpath := os.Getenv("KUBECONFIG")

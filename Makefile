@@ -13,11 +13,11 @@ build:
 
 run: build
 	@echo "Running kube-smoketest.."
-	@build/kube-smoketest -alsologtostderr
+	@build/kube-smoketest
 
 debug: build
 	@echo "Running kube-smoketest w/ debug.."
-	@build/kube-smoketest -alsologtostderr -v=10 -debug
+	@build/kube-smoketest -v=10 -debug
 
 clean:
 	@kubectl delete namespace kube-smoketest

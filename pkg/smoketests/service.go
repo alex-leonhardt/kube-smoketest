@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -210,26 +211,42 @@ func TestNodePortService(ctx context.Context, client *kubernetes.Clientset) erro
 	}
 	// -- setup http connection
 	url := fmt.Sprintf("http://%s:%d", candidateIPs[0], nodePort)
-	glog.V(10).Info(serviceNameNodePort, "url:", url)
+	glog.V(10).Info(serviceNameNodePort, " url: ", url)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return err
 	}
 
-	c := http.DefaultClient
-	c.Timeout = time.Second
+	hc := &http.Client{
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout: time.Second,
+			}).Dial,
+			TLSHandshakeTimeout:   time.Second,
+			ResponseHeaderTimeout: time.Second,
+			ExpectContinueTimeout: time.Second,
+		},
+		Timeout: 5 * time.Second,
+	}
 
 	// --- Do the http request with custom timeout
-	resp, err := c.Do(req)
+	resp, err := hc.Do(req)
 
-	maxTries := 3
-	for maxTries > 0 {
-		if err != nil && resp == nil {
+	if resp == nil && err != nil {
+		maxTries := 3
+		time.Sleep(time.Second)
+
+		for maxTries > 0 {
 			maxTries--
+			glog.V(10).Infof("request failed: %v, retrying.. will retry %d more times", err, maxTries)
+			resp, err = hc.Do(req)
+			if resp != nil && err == nil {
+				break
+			}
 			time.Sleep(time.Second)
 		}
-		resp, err = c.Do(req)
+
 	}
 
 	if err != nil {
