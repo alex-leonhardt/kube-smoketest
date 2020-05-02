@@ -1,4 +1,4 @@
-// create a deployment, confirms that controller-manager and scheduler work
+// Package smoketests ... create a deployment, confirms that controller-manager and scheduler work
 package smoketests
 
 import (
@@ -13,12 +13,14 @@ import (
 
 // CreateDeployment creates a dummy nginx deployment of 2 pods
 func CreateDeployment(ctx context.Context, client *kubernetes.Clientset) error {
-
 	deploy, err := client.AppsV1().Deployments(namespace).Get(ctx, "smoketest", metav1.GetOptions{})
 	if err == nil {
 		glog.V(2).Infof("using existing deployment: %#v", deploy.ObjectMeta.Name)
 		return nil
 	}
+
+	glog.V(2).Infoln("creating deployment")
+
 	numReplicas := int32(2)
 
 	deployment := &appsv1.Deployment{
@@ -58,6 +60,7 @@ func CreateDeployment(ctx context.Context, client *kubernetes.Clientset) error {
 			},
 		},
 	}
+
 	deploy, err = client.AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	if err != nil {
 		glog.Errorf("failed to create deployment: %v", err)
@@ -69,7 +72,7 @@ func CreateDeployment(ctx context.Context, client *kubernetes.Clientset) error {
 		return err
 	}
 
-	glog.V(2).Infof("created deployment %s", deploy.ObjectMeta.Name)
+	glog.V(2).Infof("successfully created deployment %s", deploy.ObjectMeta.Name)
 	return nil
 }
 

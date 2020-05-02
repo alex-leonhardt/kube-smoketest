@@ -146,3 +146,56 @@ func PodLogs(ctx context.Context, client *kubernetes.Clientset) error {
 
 	return nil
 }
+
+// GetPodLogs gets a Pod's logs :)
+func GetPodLogs(ctx context.Context, client *kubernetes.Clientset, podName string) ([]string, error) {
+
+	pod, err := client.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		glog.Errorf("failed to get pod: %v", err)
+		return nil, err
+	}
+
+	logLines := int64(10)
+	logOptions := &v1.PodLogOptions{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Pod",
+		},
+		TailLines: &logLines,
+	}
+
+	rc := client.RESTClient()
+	req := rc.Get().
+		Prefix("/api/v1/"). // TODO: find out why this is necessary to make this request work ?
+		Resource("pods").
+		Namespace(namespace).
+		Name(pod.Name).
+		SubResource("log").
+		Param("tailLines", strconv.FormatInt(*logOptions.TailLines, 10))
+
+	if glog.V(10) {
+		// debug output
+		r := *req.URL()
+		glog.Infof("Request: %s://%s%s", r.Scheme, r.Host, r.Path)
+	}
+
+	readCloser, err := req.Stream(ctx)
+	if err != nil {
+		glog.Errorf(err.Error())
+		return nil, err
+	}
+	defer readCloser.Close()
+
+	out := bytes.NewBuffer(nil)
+	_, err = io.Copy(out, readCloser)
+	if err != nil {
+		glog.Errorf(err.Error())
+		return nil, err
+	}
+
+	o, _ := ioutil.ReadAll(out)
+	oo := strings.Split(string(o), "\n")
+
+	return oo, nil
+}

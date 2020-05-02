@@ -46,24 +46,24 @@ func main() {
 
 	err = smoketests.ComponentStatus(ctx, client)
 	if err != nil {
-		glog.Errorf("🔴 Component statuses: %v", err)
+		glog.Errorf("\t🔴 Component statuses: %v", err)
 		errors.Errors = append(errors.Errors, err)
 		LogAndExit(errors) // exit early as if components are failed
 	}
 	if err == nil {
-		glog.Infoln("🧩 Component statuses")
+		glog.Infoln("\t✅ Component statuses")
 	}
 
 	// -------------------------------------------------
 
 	err = smoketests.CreateNamespace(ctx, client)
 	if err != nil {
-		glog.Errorf("🔴 Create namespace: %v", err)
+		glog.Errorf("\t🔴 Create namespace: %v", err)
 		errors.Errors = append(errors.Errors, err)
 		LogAndExit(errors) // exit early as if there's no namespace, then we cannot run
 	}
 	if err == nil {
-		glog.Infoln("🎮 Create namespace")
+		glog.Infoln("\t✅ Create namespace")
 	}
 
 	// -------------------------------------------------
@@ -71,10 +71,10 @@ func main() {
 	err = smoketests.PodLogs(ctx, client)
 	if err != nil {
 		errors.Errors = append(errors.Errors, err)
-		glog.Errorf("🔴 Pod + Logs: %v", err)
+		glog.Errorf("\t🔴 Pod + Logs: %v", err)
 	}
 	if err == nil {
-		glog.Infoln("🐳 Pod + 📜 Logs")
+		glog.Infoln("\t✅ Pod + Logs")
 	}
 
 	// -------------------------------------------------
@@ -82,26 +82,60 @@ func main() {
 	err = smoketests.CreateDeployment(ctx, client)
 	if err != nil {
 		errors.Errors = append(errors.Errors, err)
-		glog.Errorf("🔴 Deployment: %v", err)
+		glog.Errorf("\t🔴 Deployment: %v", err)
 	}
 	if err == nil {
-		glog.Infoln("🚀 Deployment")
+		glog.Infoln("\t✅ Deployment")
 	}
 
 	// -------------------------------------------------
 
-	// -------------------------------------------------
-	// delete the namespace when debug is set to false, which is the default
-
-	if *debug == false {
-		err = smoketests.DeleteNamespace(ctx, client)
-		if err != nil {
-			errors.Errors = append(errors.Errors, err)
-			glog.Errorf("🔴 Delete namespace: %v", err)
-		}
+	err = smoketests.CreateService(ctx, client)
+	if err != nil {
+		errors.Errors = append(errors.Errors, err)
+		glog.Errorf("\t🔴 Service: %v", err)
 	}
 	if err == nil {
-		glog.Infoln("⦿ Delete namespace")
+		glog.Infoln("\t✅ Service")
+	}
+
+	// -------------------------------------------------
+
+	err = smoketests.CreateNodePortService(ctx, client)
+	if err != nil {
+		errors.Errors = append(errors.Errors, err)
+		glog.Errorf("\t🔴 NodePort Service: %v", err)
+	}
+	if err == nil {
+		glog.Infoln("\t✅ NodePort Service")
+	}
+
+	// -------------------------------------------------
+
+	err = smoketests.CreateSecret(ctx, client)
+	if err != nil {
+		errors.Errors = append(errors.Errors, err)
+		glog.Errorf("\t🔴 Secret: %v", err)
+	}
+	if err == nil {
+		glog.Infoln("\t✅ Secret")
+	}
+
+	// -------------------------------------------------
+
+	// don't delete the namespace when debug is set to true
+	if *debug != false {
+		glog.Infoln("\t⚠️  Namespace remains for debugging")
+		LogAndExit(errors)
+	}
+
+	err = smoketests.DeleteNamespace(ctx, client)
+	if err != nil {
+		errors.Errors = append(errors.Errors, err)
+		glog.Errorf("\t🔴 Delete namespace: %v", err)
+	}
+	if err == nil {
+		glog.Infoln("\t✅ Delete namespace")
 	}
 
 	LogAndExit(errors)
@@ -109,8 +143,11 @@ func main() {
 
 // LogAndExit does just that...
 func LogAndExit(errors multierror.Error) {
+
 	if errors.ErrorOrNil() != nil {
-		glog.Errorln("🔥too many errors found, expected: 0, actual:", len(errors.Errors))
+		glog.Errorln("\t🔴 FAILED: too many errors found, expected: 0, actual:", len(errors.Errors))
+	} else {
+		glog.Infoln("\t✅ SUCCESS: all tests passed")
 	}
 	os.Exit(len(errors.Errors)) // Exits > 0 if any errors occured :)
 }

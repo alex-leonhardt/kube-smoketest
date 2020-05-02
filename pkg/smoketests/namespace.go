@@ -2,7 +2,6 @@ package smoketests
 
 import (
 	"context"
-	"time"
 
 	"github.com/golang/glog"
 	v1 "k8s.io/api/core/v1"
@@ -33,20 +32,9 @@ func CreateNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 		return err
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(2 * time.Second):
-			//
-		}
-		ns, err := client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-		if err != nil {
-			continue
-		}
-		if ns != nil {
-			break
-		}
+	if err = WaitFor(ctx, client, Namespace); err != nil {
+		glog.Errorf("failed to create namespace %s: %v", namespace, err.Error())
+		return err
 	}
 
 	glog.V(2).Infof("namespace %v created", ns.Name)

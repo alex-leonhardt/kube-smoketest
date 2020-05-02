@@ -1,3 +1,4 @@
+// Package smoketests ... we will have to wait for things, so that's done here
 package smoketests
 
 import (
@@ -11,6 +12,38 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
+
+// ErrNotImplemented is returned when the resource type provided is not being dealt with (yet)
+var ErrNotImplemented = errors.New("not yet implemented")
+
+// ErrUnknownResourceType is returned when the resource type provided is not being dealt with (yet)
+var ErrUnknownResourceType = errors.New("unknown resource type")
+
+// ErrWrongTypeForArgument is returned when a optinal argument was given, but its value had the wrong type (e.g. int instead of int32)
+var ErrWrongTypeForArgument = errors.New("wrong type for optional argument")
+
+// ErrUnknownPodStatus is returned when a pod status is not being handled yet
+var ErrUnknownPodStatus = errors.New("unknown pod status")
+
+// PodStatus describes a Pod's status
+type PodStatus int
+
+// Enums for Pod states
+const (
+	PodRunning PodStatus = iota + 1
+	PodCompleted
+)
+
+func (s PodStatus) String() string {
+	switch s {
+	case PodRunning:
+		return "Running"
+	case PodCompleted:
+		return "Completed"
+	default:
+		return ErrUnknownPodStatus.Error()
+	}
+}
 
 // Resource is a k8s resource
 type Resource int
@@ -26,20 +59,12 @@ const (
 	Secret
 )
 
-// ErrUnknownResourceType is returned when the resource type provided is not being dealt with (yet)
-var ErrNotImplemented = errors.New("not yet implemented")
-
-// ErrUnknownResourceType is returned when the resource type provided is not being dealt with (yet)
-var ErrUnknownResourceType = errors.New("unknown resource type")
-
-// ErrWrongTypeForArgument is returned when a optinal argument was given, but its value had the wrong type (e.g. int instead of int32)
-var ErrWrongTypeForArgument = errors.New("wrong type for optional argument")
-
 // --- optinoal arguments to WaitFor
 
 type options struct {
 	NumReady int32
 	PodName  string
+	Status   PodStatus
 }
 
 // Option represents a optional argument to WaitFor
@@ -72,12 +97,25 @@ func WithNumReady(n int32) Option {
 }
 
 // ---
+type status PodStatus
+
+func (s status) apply(opts *options) {
+	opts.Status = PodStatus(s)
+}
+
+// WithStatus sets the expected Pod status
+func WithStatus(n PodStatus) Option {
+	return status(n)
+}
+
+// ---
 
 // WaitFor waits for a resource to be in a ready, unready, etc. state and
 // returns with an error when the ctx timed out, or with nil
 func WaitFor(ctx context.Context, client *kubernetes.Clientset, resource Resource, opts ...Option) error {
 
 	options := options{}
+
 	for _, o := range opts {
 		o.apply(&options)
 	}
@@ -101,7 +139,13 @@ func WaitFor(ctx context.Context, client *kubernetes.Clientset, resource Resourc
 
 		switch resource {
 		case Namespace:
-			return ErrNotImplemented
+			ns, err := client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			if err != nil {
+				continue
+			}
+			if ns != nil {
+				return nil
+			}
 		case Deployment:
 			deployment, err := client.AppsV1().Deployments(namespace).Get(ctx, "smoketest", metav1.GetOptions{})
 			if err != nil {
@@ -115,14 +159,32 @@ func WaitFor(ctx context.Context, client *kubernetes.Clientset, resource Resourc
 			glog.V(2).Infof("waiting for pods to become available: %v", time.Since(t))
 
 		case Pod:
+
+			if options.Status == 0 {
+				options.Status = PodRunning // default to waiting for a Running pod
+			}
+
 			tmpPod, err := client.CoreV1().Pods(namespace).Get(ctx, options.PodName, metav1.GetOptions{})
 			if err != nil {
 				continue
 			}
-			if tmpPod.Status.Phase == v1.PodRunning {
-				return nil
+
+			switch options.Status {
+			case PodRunning:
+				if tmpPod.Status.Phase == v1.PodRunning {
+					return nil
+				}
+			case PodCompleted:
+				if len(tmpPod.Status.ContainerStatuses) > 0 {
+					if tmpPod.Status.ContainerStatuses[0].State.Terminated != nil {
+						if tmpPod.Status.ContainerStatuses[0].State.Terminated.Reason == PodCompleted.String() {
+							return nil
+						}
+					}
+				}
 			}
-			glog.V(2).Infof("waiting for pod to be ready: %v", time.Since(t))
+
+			glog.V(2).Infof("waiting for pod to be %s: %v", options.Status.String(), time.Since(t))
 
 		case StatefulSet:
 			return ErrNotImplemented
