@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -143,6 +145,9 @@ func main() {
 
 // LogAndExit does just that...
 func LogAndExit(errors multierror.Error) {
+	fmt.Println("")
+	fmt.Println(strings.Repeat("-", 20), "RESULT", strings.Repeat("-", 20))
+	fmt.Println("")
 
 	if errors.ErrorOrNil() != nil {
 		glog.Errorln("\t🔴 FAILED: too many errors found, expected: 0, actual:", len(errors.Errors))
